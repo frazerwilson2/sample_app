@@ -5,6 +5,7 @@ class UsersController < ApplicationController
 
   def show
     @user = User.find(params[:id])
+    @microposts = @user.microposts.paginate(page: params[:page])
   end
 
   def new
@@ -45,9 +46,14 @@ class UsersController < ApplicationController
   end
 
   def destroy
-    User.find(params[:id]).destroy
-    flash[:success] = "User deleted."
-    redirect_to users_url
+    user = User.find(params[:id])
+    if (current_user == user) && (current_user.admin?)
+      flash[:error] = "Can not delete own admin account!"
+    else
+      user.destroy
+      flash[:success] = "User destroyed."
+    end
+  redirect_to users_path
   end
 
   private
@@ -58,13 +64,13 @@ class UsersController < ApplicationController
     end
 
     # Before filters
+    before_filter :signed_in_user_filter, only: [:new, :create]
 
-    def signed_in_user
-      unless signed_in?
-        store_location
-        redirect_to signin_url, notice: "Please sign in."
-      end
+    def signed_in_user_filter
+  redirect_to root_path, notice: "Already logged in" if signed_in?
     end
+
+
 
     def correct_user
       @user = User.find(params[:id])
